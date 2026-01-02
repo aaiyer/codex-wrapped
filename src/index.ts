@@ -19,18 +19,18 @@ function printHelp() {
   console.log(`
 codex-wrapped v${VERSION}
 
-Generate your Codex year in review stats card.
+Generate your Codex wrapped stats card (all-time by default).
 
 USAGE:
   codex-wrapped [OPTIONS]
 
 OPTIONS:
-  --year <YYYY>    Generate wrapped for a specific year (default: current year)
+  --year <YYYY>    Generate wrapped for a specific year (default: all-time)
   --help, -h       Show this help message
   --version, -v    Show version number
 
 EXAMPLES:
-  codex-wrapped              # Generate current year wrapped
+  codex-wrapped              # Generate all-time wrapped
   codex-wrapped --year 2025  # Generate 2025 wrapped
 `);
 }
@@ -60,17 +60,25 @@ async function main() {
 
   p.intro("codex wrapped");
 
-  const requestedYear = values.year ? parseInt(values.year, 10) : new Date().getFullYear();
+  const requestedYear = values.year ? parseInt(values.year, 10) : undefined;
+  if (values.year && !Number.isFinite(requestedYear)) {
+    p.cancel(`Invalid year: ${values.year}`);
+    process.exit(1);
+  }
 
-  const availability = isWrappedAvailable(requestedYear);
-  if (!availability.available) {
-    if (Array.isArray(availability.message)) {
-      availability.message.forEach((line) => p.log.warn(line));
-    } else {
-      p.log.warn(availability.message || "Wrapped not available yet.");
+  const periodLabel = typeof requestedYear === "number" ? String(requestedYear) : "All Time";
+
+  if (typeof requestedYear === "number") {
+    const availability = isWrappedAvailable(requestedYear);
+    if (!availability.available) {
+      if (Array.isArray(availability.message)) {
+        availability.message.forEach((line) => p.log.warn(line));
+      } else {
+        p.log.warn(availability.message || "Wrapped not available yet.");
+      }
+      p.cancel();
+      process.exit(0);
     }
-    p.cancel();
-    process.exit(0);
   }
 
   const dataExists = await checkCodexDataExists();
@@ -84,7 +92,7 @@ async function main() {
 
   let stats;
   try {
-    stats = await calculateStats(requestedYear);
+    stats = await calculateStats({ year: requestedYear });
   } catch (error) {
     spinner.stop("Failed to collect stats");
     p.cancel(`Error: ${error}`);
@@ -93,7 +101,7 @@ async function main() {
 
   if (stats.totalSessions === 0) {
     spinner.stop("No data found");
-    p.cancel(`No Codex activity found for ${requestedYear}`);
+    p.cancel(typeof requestedYear === "number" ? `No Codex activity found for ${requestedYear}` : "No Codex activity found");
     process.exit(0);
   }
 
@@ -112,7 +120,7 @@ async function main() {
     stats.mostActiveDay && `Most Active:   ${stats.mostActiveDay.formattedDate}`,
   ].filter(Boolean);
 
-  p.note(summaryLines.join("\n"), `Your ${requestedYear} in Codex`);
+  p.note(summaryLines.join("\n"), `Your ${periodLabel} in Codex`);
 
   // Generate image
   spinner.start("Generating your wrapped image...");
@@ -133,7 +141,7 @@ async function main() {
     p.log.info(`Terminal (${getTerminalName()}) doesn't support inline images`);
   }
 
-  const filename = `codex-wrapped-${requestedYear}.png`;
+  const filename = `codex-wrapped-${typeof requestedYear === "number" ? requestedYear : "all-time"}.png`;
   const { success, error } = await copyImageToClipboard(image.fullSize, filename);
 
   if (success) {
@@ -187,7 +195,7 @@ async function main() {
 
 function generateTweetUrl(stats: CodexStats): string {
   const lines: string[] = [];
-  lines.push(`Codex Wrapped ${stats.year}`);
+  lines.push(`Codex Wrapped ${stats.periodLabel}`);
   lines.push("");
   lines.push(`Total Tokens: ${formatNumberFull(stats.totalTokens)}`);
   lines.push(`Total Messages: ${formatNumberFull(stats.totalMessages)}`);

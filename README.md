@@ -50,7 +50,7 @@ codex-wrapped
 
 | Option          | Description                          |
 | --------------- | ------------------------------------ |
-| `--year, -y`    | Generate wrapped for a specific year |
+| `--year, -y`    | Generate wrapped for a specific year (default: all-time) |
 | `--help, -h`    | Show help message                    |
 | `--version, -v` | Show version number                  |
 

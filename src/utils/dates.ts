@@ -57,6 +57,41 @@ export function generateWeeksForYear(year: number): string[][] {
   return weeks;
 }
 
+export function generateWeeksForRange(startDate: Date, endDate: Date): string[][] {
+  const start = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+  const end = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+
+  const weeks: string[][] = [];
+
+  // Adjust to start from the first Sunday (or the day itself if it's Sunday)
+  const startDay = start.getDay();
+  const adjustedStart = new Date(start);
+  if (startDay !== 0) {
+    adjustedStart.setDate(start.getDate() - startDay);
+  }
+
+  let currentDate = new Date(adjustedStart);
+  let currentWeek: string[] = [];
+
+  while (currentDate <= end || currentWeek.length > 0) {
+    const dayOfWeek = currentDate.getDay();
+    const withinRange = currentDate >= start && currentDate <= end;
+    currentWeek.push(withinRange ? formatDateKey(currentDate) : "");
+
+    if (dayOfWeek === 6) {
+      weeks.push(currentWeek);
+      currentWeek = [];
+    }
+
+    currentDate.setDate(currentDate.getDate() + 1);
+
+    // Safety: stop if we've gone too far past the end
+    if (currentDate.getTime() > end.getTime() + 32 * 24 * 60 * 60 * 1000) break;
+  }
+
+  return weeks;
+}
+
 export function formatDateKey(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");

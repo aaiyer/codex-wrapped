@@ -11,9 +11,10 @@ type ModelUsageTotals = {
   totalTokens: number;
 };
 
-export async function calculateStats(year: number): Promise<CodexStats> {
+export async function calculateStats(options?: { year?: number }): Promise<CodexStats> {
   await fetchModelsData();
 
+  const year = options?.year;
   const usageData = await collectCodexUsageData(year);
   const dailyActivity = usageData.dailyActivity;
   const weekdayCounts: [number, number, number, number, number, number, number] = [0, 0, 0, 0, 0, 0, 0];
@@ -103,8 +104,18 @@ export async function calculateStats(year: number): Promise<CodexStats> {
   const daysSinceFirstSession = Math.floor((Date.now() - firstSessionDate.getTime()) / (1000 * 60 * 60 * 24));
   const totalCost = await calculateUsageCost(modelUsageTotals);
 
+  const periodLabel = typeof year === "number" ? String(year) : "All Time";
+  const activityLabel = typeof year === "number" ? "Activity" : "Activity (Last 12 months)";
+
+  const activityHeatmap = typeof year === "number"
+    ? ({ kind: "year", year } as const)
+    : ({ kind: "range", ...getLast12MonthsHeatmapRange(firstSessionDate) } as const);
+
   return {
+    periodLabel,
     year,
+    activityHeatmap,
+    activityLabel,
     firstSessionDate,
     daysSinceFirstSession,
     totalSessions: usageData.totalSessions,
@@ -198,11 +209,11 @@ async function calculateUsageCost(modelUsageTotals: Map<string, ModelUsageTotals
 
 function calculateStreaks(
   dailyActivity: Map<string, number>,
-  year: number
+  year?: number
 ): { maxStreak: number; currentStreak: number; maxStreakDays: Set<string> } {
   // Get all active dates sorted
   const activeDates = Array.from(dailyActivity.keys())
-    .filter((date) => date.startsWith(String(year)))
+    .filter((date) => (typeof year === "number" ? date.startsWith(String(year)) : true))
     .sort();
 
   if (activeDates.length === 0) {
@@ -253,6 +264,19 @@ function calculateStreaks(
     : 0;
 
   return { maxStreak, currentStreak, maxStreakDays };
+}
+
+function getLast12MonthsHeatmapRange(firstSessionDate: Date): { start: Date; end: Date } {
+  const end = new Date();
+  end.setHours(0, 0, 0, 0);
+
+  const start = new Date(end);
+  start.setDate(start.getDate() - 364);
+
+  const first = new Date(firstSessionDate);
+  first.setHours(0, 0, 0, 0);
+
+  return { start: first > start ? first : start, end };
 }
 
 /** Count consecutive days with activity going backwards from startDate (inclusive) */

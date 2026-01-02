@@ -1,11 +1,10 @@
-import { generateWeeksForYear, getIntensityLevel } from "../utils/dates";
+import { generateWeeksForRange, generateWeeksForYear, getIntensityLevel } from "../utils/dates";
 import { colors, typography, spacing, components, HEATMAP_COLORS, STREAK_COLORS } from "./design-tokens";
 
-interface HeatmapProps {
+type HeatmapProps = {
   dailyActivity: Map<string, number>;
-  year: number;
   maxStreakDays?: Set<string>;
-}
+} & ({ year: number } | { range: { start: Date; end: Date } });
 
 interface MonthLabel {
   month: number;
@@ -21,10 +20,19 @@ const CELL_RADIUS = components.heatmapCell.borderRadius;
 const LEGEND_CELL_SIZE = components.legend.cellSize;
 const LEGEND_GAP = components.legend.gap;
 
-export function ActivityHeatmap({ dailyActivity, year, maxStreakDays }: HeatmapProps) {
-  const weeks = generateWeeksForYear(year);
+export function ActivityHeatmap(props: HeatmapProps) {
+  const { dailyActivity, maxStreakDays } = props;
+  const weeks = "year" in props
+    ? generateWeeksForYear(props.year)
+    : generateWeeksForRange(props.range.start, props.range.end);
 
-  const counts = Array.from(dailyActivity.values());
+  const counts: number[] = [];
+  for (const week of weeks) {
+    for (const dateStr of week) {
+      if (!dateStr) continue;
+      counts.push(dailyActivity.get(dateStr) || 0);
+    }
+  }
   const maxCount = counts.length > 0 ? Math.max(...counts) : 0;
 
   const monthLabels = getMonthLabels(weeks, CELL_SIZE, CELL_GAP);

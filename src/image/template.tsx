@@ -49,7 +49,7 @@ export function WrappedTemplate({ stats }: { stats: CodexStats }) {
           borderRadius: layout.radius.full,
         }}
       />
-      <Header year={stats.year} />
+      <Header label={stats.periodLabel} />
 
       <div style={{ marginTop: spacing[8], display: "flex", flexDirection: "row", gap: spacing[16], alignItems: "flex-start" }}>
         <HeroStatItem
@@ -88,8 +88,16 @@ export function WrappedTemplate({ stats }: { stats: CodexStats }) {
         </div>
       </div>
 
-      <Section title="Activity" marginTop={spacing[8]}>
-        <ActivityHeatmap dailyActivity={stats.dailyActivity} year={stats.year} maxStreakDays={stats.maxStreakDays} />
+      <Section title={stats.activityLabel} marginTop={spacing[8]}>
+        {"year" in stats.activityHeatmap ? (
+          <ActivityHeatmap dailyActivity={stats.dailyActivity} year={stats.activityHeatmap.year} maxStreakDays={stats.maxStreakDays} />
+        ) : (
+          <ActivityHeatmap
+            dailyActivity={stats.dailyActivity}
+            range={{ start: stats.activityHeatmap.start, end: stats.activityHeatmap.end }}
+            maxStreakDays={stats.maxStreakDays}
+          />
+        )}
       </Section>
 
       <div
@@ -115,7 +123,7 @@ export function WrappedTemplate({ stats }: { stats: CodexStats }) {
   );
 }
 
-function Header({ year }: { year: number }) {
+function Header({ label }: { label: string }) {
   return (
     <div
       style={{
@@ -181,7 +189,7 @@ function Header({ year }: { year: number }) {
               lineHeight: typography.lineHeight.none,
             }}
           >
-            {year}
+            {label}
           </span>
         </div>
       </div>

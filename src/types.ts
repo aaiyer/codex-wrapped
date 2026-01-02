@@ -71,7 +71,15 @@ export interface ProviderStats {
 }
 
 export interface CodexStats {
-  year: number;
+  /** Display label for the wrapped period (e.g. "2025", "All Time"). */
+  periodLabel: string;
+  /** Present when generating a single-year wrapped. */
+  year?: number;
+
+  /** Activity heatmap configuration. */
+  activityHeatmap: { kind: "year"; year: number } | { kind: "range"; start: Date; end: Date };
+  /** Title label for the activity section. */
+  activityLabel: string;
 
   // Time-based
   firstSessionDate: Date;

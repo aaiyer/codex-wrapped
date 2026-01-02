@@ -78,6 +78,27 @@ export async function listCodexSessionFiles(year: number): Promise<string[]> {
   return files;
 }
 
+export async function listCodexSessionFilesAllTime(): Promise<string[]> {
+  let yearDirs: string[] = [];
+  try {
+    const entries = await readdir(CODEX_SESSIONS_PATH, { withFileTypes: true });
+    yearDirs = entries
+      .filter((e) => e.isDirectory() && /^\d{4}$/.test(e.name))
+      .map((e) => e.name)
+      .sort();
+  } catch {
+    return [];
+  }
+
+  const files: string[] = [];
+  for (const dir of yearDirs) {
+    const year = parseInt(dir, 10);
+    if (!Number.isFinite(year)) continue;
+    files.push(...(await listCodexSessionFiles(year)));
+  }
+  return files;
+}
+
 export async function getCodexFirstPromptTimestamp(): Promise<number | null> {
   try {
     const raw = await readFile(CODEX_HISTORY_PATH, "utf8");
@@ -100,8 +121,8 @@ export async function getCodexFirstPromptTimestamp(): Promise<number | null> {
   }
 }
 
-export async function collectCodexUsageData(year: number): Promise<CodexUsageData> {
-  const files = await listCodexSessionFiles(year);
+export async function collectCodexUsageData(year?: number): Promise<CodexUsageData> {
+  const files = typeof year === "number" ? await listCodexSessionFiles(year) : await listCodexSessionFilesAllTime();
   const events: CodexUsageEvent[] = [];
   const dailyActivity = new Map<string, number>();
   const projects = new Set<string>();
